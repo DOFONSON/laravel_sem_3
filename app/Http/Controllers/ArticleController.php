@@ -4,6 +4,8 @@ use App\Models\Article;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\Comment;
+use Illuminate\Support\Facades\Gate;
+
 class ArticleController extends Controller
 {
     /**
@@ -26,6 +28,7 @@ class ArticleController extends Controller
      */
     public function store(Request $request)
     {
+        Gate::authorize('create', [self::class]);
         $request->validate([
             'date'=>'date',
             'name'=>'required|min:5|max:100',
@@ -60,6 +63,7 @@ class ArticleController extends Controller
      */
     public function update(Request $request, Article $article)
     {
+        Gate::authorize('update', $article);
         $request->validate([
             'date'=>'date',
             'name'=>'required|min:5|max:100',
@@ -77,6 +81,7 @@ class ArticleController extends Controller
      */
     public function destroy(Article $article)
     {
+        Gate::authorize('delete', $article);
         if ($article->delete()) return redirect('/article')->with('status','Delete success');
         else return redirect()->route('article.show', ['article'=>$article->id])->with('status','Delete don`t success');
     }
