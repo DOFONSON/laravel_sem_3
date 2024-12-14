@@ -7,12 +7,11 @@
       {{ session('status') }}
   </div>
 @endif
-
 <table class="table">
   <thead>
     <tr>
       <th scope="col">Date</th>
-      <th scope="col">Name</th>
+      <th scope="col">Article Name</th>
       <th scope="col">Description</th>
       <th scope="col">Author</th>
       <th scope="col">Accept/Reject</th>
@@ -25,10 +24,17 @@
       <td><a href="/article/{{ $comment->article_id }}">{{Article::findOrFail($comment->article_id)->name}}</a></td>
       <td>{{$comment->desc}}</td>
       <td>{{ User::findOrFail($comment->user_id)->name }}</td>
-      <td class='text-center'><a href="" class='btn btn-success'>Accept</a><a href="" class='btn btn-warning'>Reject</a></td>
+      <td class="text-center">
+        @if(!$comment->accept)
+          <a href="/comment/{{$comment->id}}/accept" class="btn btn-success">Accept</a>
+        @else
+          <a href="/comment/{{$comment->id}}/reject" class="btn btn-warning">Reject</a>
+        @endif
+        </td>
+
     </tr>
     @endforeach
   </tbody>
 </table>
-{{ $articles->links() }}
+{{ $comments->links() }}
 @endsection

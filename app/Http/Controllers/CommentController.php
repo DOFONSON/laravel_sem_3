@@ -4,10 +4,19 @@ use Illuminate\Http\Request;
 use App\Models\Comment;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Mail;
+use App\Mail\NewCommentMail;
+use App\Models\Article;
+use App\Jobs\VeryLongJob;
 class CommentController extends Controller
 {
+    public function index(){
+        $comments = Comment::latest()->paginate(10);
+        return view('comments.index', ['comments'=>$comments]);
+    }
+
     public function store(Request $request){
+        $article = Article::findOrFail($request->article_id);
         $request->validate([
             'name'=>'required|min:4',
             'desc'=>'required|max:256'
@@ -17,28 +26,43 @@ class CommentController extends Controller
         $comment->desc = request('desc'); 
         $comment->article_id = request('article_id');
         $comment->user_id = Auth::id();
-        if ($comment->save()) return redirect()->back()->with('status', 'Add new comment');
-        else return redirect()->back()->with('status', 'Add failed');        
+        if($comment->save()) {
+            VeryLongJob::dispatch($comment, $article->name);
+            return redirect()->back()->with('status', 'Комментарий сохранен и отправлен на модерацию');
+        }
     }
     public function edit($id){
         $comment = Comment::findOrFail($id);
         Gate::authorize('update_comment', $comment);
         return view('comment.update', ['comment'=>$comment]);
     }
+    
     public function update(Request $request, Comment $comment){
         Gate::authorize('update_comment', $comment);
         $request->validate([
-            'name'=>'required|min:4',
+            'name'=>'required|min:3',
             'desc'=>'required|max:256'
         ]);
         $comment->name = request('name');
-        $comment->desc = request('desc'); 
-        if ($comment->save()) return redirect()->route('article.show', $comment->article_id)->with('status', 'Comment update success');
-        else return redirect()->back()->with('status', 'Update failed'); 
+        $comment->desc = request('desc');
+        $comment->save();
+        return redirect()->route('article.show', ['article'=>$comment->article_id]);
     }
-    public function destroy(Comment $comment){
+
+    public function delete($id){
+        $comment = Comment::findOrFail($id);
         Gate::authorize('update_comment', $comment);
-        if ($comment->delete()) return redirect()->route('article.show', $comment->article_id)->with('status', 'Delete comment success');
-        else return redirect()->route('article.show', $comment->article_id)->with('status', 'Delete comment failed');
+        $comment->delete();
+        return redirect()->route('article.show', ['article'=>$comment->article_id])->with('status','Delete success');
+    }
+    public function accept(Comment $comment){
+        $comment->accept = true;
+        $comment->save();
+        return redirect()->route('comment.index');
+    }
+    public function reject(Comment $comment){
+        $comment->accept = false;
+        $comment->save();
+        return redirect()->route('comment.index');
     }
 }
